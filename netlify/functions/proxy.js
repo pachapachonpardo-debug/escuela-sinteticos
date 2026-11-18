@@ -11,7 +11,7 @@ exports.handler = async (event) => {
     };
   }
 
-  const path = event.path.replace(/^\/\.netlify\/functions\/proxy/, '');
+  const path = event.path.replace(/^(\/\.netlify\/functions\/proxy|\/api)/, '');
   const query = event.rawQuery ? `?${event.rawQuery}` : '';
   const targetUrl = `https://znmkhayvymsvmympdtsm.supabase.co${path}${query}`;
 
