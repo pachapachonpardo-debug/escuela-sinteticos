@@ -523,7 +523,7 @@
             <td>${row.email}</td>
             <td><strong>Paso ${row.paso_actual}</strong></td>
             <td>${row.respuesta_paso1 || "—"}</td>
-            <td>${row.evidencia_paso1_url ? `<a href="${row.evidencia_paso1_url}" target="_blank" class="ev-link">Ver Captura ↗</a>` : "Pendiente"}</td>
+            <td>${row.evidencia_paso1_url ? `<a href="${row.evidencia_paso1_url.replace('https://escuela-sinteticos-global.netlify.app/api', 'https://znmkhayvymsvmympdtsm.supabase.co')}" target="_blank" class="ev-link">Ver Captura ↗</a>` : "Pendiente"}</td>
           </tr>
         `).join("");
       }
