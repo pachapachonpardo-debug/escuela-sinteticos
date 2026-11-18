@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Escuela de Trading | Índices Sintéticos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            navy: { 950: '#060B14', 900: '#0B1320', 800: '#131E32', 700: '#1D2D49' },
+            emerald: { 450: '#10B981', 550: '#059669' },
+            gold: { 450: '#F59E0B', 550: '#D97706' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #060B14; color: #F8FAFC; font-family: system-ui, -apple-system, sans-serif; }
+    .otp-input { width: 2.75rem; height: 3.25rem; text-align: center; font-size: 1.4rem; font-weight: bold; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- PANTALLA DE AUTENTICACIÓN Y VERIFICACIÓN OTP -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-navy-800 via-navy-950 to-navy-950">
+    <div class="w-full max-w-md bg-navy-900/95 border border-navy-700 rounded-2xl p-8 shadow-2xl">
+      
+      <div class="flex items-center justify-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+          <i class="fa-solid fa-chart-line text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white">Escuela de Trading</h1>
+          <p class="text-xs text-slate-400">Especialistas en Índices Sintéticos</p>
+        </div>
+      </div>
+
+      <!-- Alertas dinámicas -->
+      <div id="auth-alert" class="hidden mb-4 p-3 rounded-lg text-sm border"></div>
+
+      <!-- Tabs Login / Registro -->
+      <div id="auth-tabs" class="grid grid-cols-2 gap-1 bg-navy-950 p-1 rounded-xl mb-6 border border-navy-800">
+        <button onclick="switchAuthTab('register')" id="tab-register" class="py-2 text-sm font-semibold rounded-lg bg-emerald-500 text-navy-950 transition">Crear Cuenta</button>
+        <button onclick="switchAuthTab('login')" id="tab-login" class="py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition">Iniciar Sesión</button>
+      </div>
+
+      <!-- Formulario Registro / Login -->
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        <div id="name-field">
+          <label class="block text-xs font-medium text-slate-300 mb-1">Nombre completo</label>
+          <input type="text" id="auth-name" placeholder="Ej. Carlos Mendoza" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Correo electrónico real</label>
+          <input type="email" id="auth-email" required placeholder="tu@correo.com" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Contraseña (mínimo 6 caracteres)</label>
+          <input type="password" id="auth-password" required minlength="6" placeholder="••••••••" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500" />
+        </div>
+        <button type="submit" id="auth-submit-btn" class="w-full bg-emerald-500 hover:bg-emerald-400 text-navy-950 font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-500/20">
+          Registrarme y recibir código
+        </button>
+      </form>
+
+      <!-- Formulario Código OTP 6 Dígitos -->
+      <div id="otp-form" class="hidden space-y-5 text-center">
+        <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-xl">
+          <i class="fa-solid fa-envelope-circle-check"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-white">Verifica tu correo</h2>
+          <p class="text-xs text-slate-400 mt-1">Enviamos un código de 6 dígitos a <span id="otp-target-email" class="text-emerald-400 font-semibold"></span></p>
+        </div>
+        <div class="flex justify-center gap-2" id="otp-boxes">
+          <input type="text" maxlength="1" class="otp-input bg-navy-950 border border-navy-700 rounded-lg text-white focus:border-emerald-500 focus:outline-none" />
+          <input type="text" maxlength="1" class="otp-input bg-navy-950 border border-navy-700 rounded-lg text-white focus:border-emerald-500 focus:outline-none" />
+          <input type="text" maxlength="1" class="otp-input bg-navy-950 border border-navy-700 rounded-lg text-white focus:border-emerald-500 focus:outline-none" />
+          <input type="text" maxlength="1" class="otp-input bg-navy-950 border border-navy-700 rounded-lg text-white focus:border-emerald-500 focus:outline-none" />
+          <input type="text" maxlength="1" class="otp-input bg-navy-950 border border-navy-700 rounded-lg text-white focus:border-emerald-500 focus:outline-none" />
+          <input type="text" maxlength="1" class="otp-input bg-navy-950 border border-navy-700 rounded-lg text-white focus:border-emerald-500 focus:outline-none" />
+        </div>
+        <button onclick="verifyOtpCode()" id="verify-otp-btn" class="w-full bg-emerald-500 hover:bg-emerald-400 text-navy-950 font-bold py-3 rounded-xl transition">
+          Confirmar Código e Ingresar
+        </button>
+        <button onclick="backToRegister()" class="text-xs text-slate-400 hover:text-white underline">Volver atrás</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLATAFORMA EDUCATIVA (DASHBOARD) -->
+  <div id="app-screen" class="hidden flex-1 flex flex-col">
+    <!-- Barra superior -->
+    <header class="bg-navy-900 border-b border-navy-800 px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <span class="font-bold text-white tracking-tight">Escuela de Trading</span>
+        <span id="plan-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">PLAN GRATUITO</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span id="user-display" class="text-xs text-slate-300 hidden sm:inline"></span>
+        <button onclick="logout()" class="text-xs bg-navy-800 hover:bg-red-500/20 hover:text-red-400 text-slate-300 px-3 py-1.5 rounded-lg border border-navy-700 transition">
+          <i class="fa-solid fa-right-from-bracket mr-1"></i> Salir
+        </button>
+      </div>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row">
+      <!-- Menú Lateral de Lecciones -->
+      <aside class="w-full md:w-80 bg-navy-900/60 border-r border-navy-800 p-4 flex flex-col justify-between">
+        <div>
+          <div class="mb-4">
+            <div class="flex justify-between text-xs text-slate-400 mb-1.5">
+              <span>Tu progreso</span>
+              <span id="progress-text" class="text-emerald-400 font-bold">0%</span>
+            </div>
+            <div class="w-full bg-navy-950 h-2 rounded-full overflow-hidden border border-navy-800">
+              <div id="progress-bar" class="bg-emerald-500 h-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+          <div id="lessons-sidebar" class="space-y-2"></div>
+        </div>
+      </aside>
+
+      <!-- Área Principal de Contenido -->
+      <main class="flex-1 p-6 md:p-10 max-w-4xl mx-auto w-full">
+        <div id="lesson-toast" class="hidden mb-6 p-4 rounded-xl border text-sm flex items-center gap-3"></div>
+        <div id="lesson-container"></div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. CONEXIÓN CON TU SERVIDOR SUPABASE (YA CONFIGURADA)
+    // =========================================================================
+    const SUPABASE_URL = "https://escuela-sinteticos.netlify.app/api";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpubWtoYXl2eW1zdm15bXBkdHNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5NTc3MjgsImV4cCI6MjExMDUzMzcyOH0.wP68yYWdQAPrjwr2yRIE3iz4qWcoAxXe8KOtYZDiKW0";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // =========================================================================
+    // 2. PLAN DE ESTUDIOS (GRATIS + VIP)
+    // =========================================================================
+    const LESSONS = [
+      {
+        id: 1,
+        module: "Módulo 1: Fundamentos (Gratis)",
+        title: "01. ¿Qué son los Índices Sintéticos y cómo funcionan?",
+        vip: false,
+        duration: "12 min",
+        summary: "Comprende la diferencia entre mercados tradicionales y algoritmos criptográficos auditados que operan 24/7 sin verse afectados por noticias fundamentales.",
+        question: "¿Qué característica principal diferencia a los índices sintéticos del mercado Forex tradicional?",
+        options: [
+          "Cierran los fines de semana y dependen de bancos centrales",
+          "Operan 24/7 mediante algoritmos matemáticos y no les afectan noticias económicas",
+          "Solo se pueden operar una hora al día"
+        ],
+        correct: 1
+      },
+      {
+        id: 2,
+        module: "Módulo 1: Fundamentos (Gratis)",
+        title: "02. Configuración profesional de MetaTrader 5",
+        vip: false,
+        duration: "15 min",
+        summary: "Aprende a vincular tu cuenta, limpiar tus gráficos y configurar las temporalidades clave para analizar la acción del precio con precisión.",
+        question: "¿Cuál es la plataforma estándar utilizada para ejecutar operaciones en índices sintéticos?",
+        options: [
+          "MetaTrader 5 (MT5)",
+          "Excel Financiero",
+          "Windows Media Player"
+        ],
+        correct: 0
+      },
+      {
+        id: 3,
+        module: "Módulo 1: Fundamentos (Gratis)",
+        title: "03. Gestión de Riesgo y Lotaje en Boom, Crash y PainX",
+        vip: false,
+        duration: "18 min",
+        summary: "Domina el cálculo exacto de lotaje mínimo y Stop Loss para proteger tu capital frente a los spikes característicos de cada índice.",
+        question: "¿Por qué es indispensable definir el Stop Loss antes de abrir una operación en sintéticos?",
+        options: [
+          "Para garantizar ganancias infinitas",
+          "Porque el broker lo exige para cobrar comisiones",
+          "Para limitar la pérdida máxima y proteger la cuenta ante movimientos bruscos"
+        ],
+        correct: 2
+      },
+      {
+        id: 4,
+        module: "Módulo 2: Estrategia Avanzada (VIP)",
+        title: "04. Lectura Institucional y Zonas de Reacción",
+        vip: true,
+        duration: "25 min",
+        summary: "Identifica bloques de órdenes, liquidez previa y patrones de agotamiento antes de un spike explosivo.",
+        question: "¿Qué buscamos identificar antes de entrar en una zona de reacción?",
+        options: [
+          "Liquidez acumulada y estructura clara del precio",
+          "Entrar al azar en cualquier vela",
+          "Operar sin mirar la tendencia mayor"
+        ],
+        correct: 0
+      },
+      {
+        id: 5,
+        module: "Módulo 2: Estrategia Avanzada (VIP)",
+        title: "05. Plan de Trading Diario y Psicotrading",
+        vip: true,
+        duration: "20 min",
+        summary: "Construye tu rutina diaria de sesiones, límites de pérdida diaria y reglas de retiro de ganancias consistentes.",
+        question: "¿Qué debes hacer tras alcanzar tu límite de pérdida diaria establecido en tu plan?",
+        options: [
+          "Duplicar el lotaje para recuperar rápido",
+          "Cerrar la plataforma y respetar el plan hasta la siguiente sesión",
+          "Cambiar de estrategia inmediatamente"
+        ],
+        correct: 1
+      }
+    ];
+
+    let authMode = 'register';
+    let pendingEmail = '';
+    let currentUser = null;
+    let studentProfile = null;
+    let activeLessonId = 1;
+
+    // =========================================================================
+    // 3. LÓGICA DE AUTENTICACIÓN Y OTP REAL
+    // =========================================================================
+    function switchAuthTab(mode) {
+      authMode = mode;
+      const isReg = mode === 'register';
+      document.getElementById('tab-register').className = isReg ? 'py-2 text-sm font-semibold rounded-lg bg-emerald-500 text-navy-950 transition' : 'py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition';
+      document.getElementById('tab-login').className = !isReg ? 'py-2 text-sm font-semibold rounded-lg bg-emerald-500 text-navy-950 transition' : 'py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition';
+      document.getElementById('name-field').style.display = isReg ? 'block' : 'none';
+      document.getElementById('auth-submit-btn').textContent = isReg ? 'Registrarme y recibir código' : 'Ingresar a mi cuenta';
+      hideAlert();
+    }
+
+    function showAlert(msg, type = 'error') {
+      const el = document.getElementById('auth-alert');
+      el.className = `mb-4 p-3 rounded-lg text-sm border ${type === 'error' ? 'bg-red-500/10 border-red-500/40 text-red-300' : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'}`;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function hideAlert() {
+      document.getElementById('auth-alert').classList.add('hidden');
+    }
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      hideAlert();
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const nombre = document.getElementById('auth-name').value.trim();
+      const btn = document.getElementById('auth-submit-btn');
+
+      btn.disabled = true;
+      btn.textContent = "Procesando...";
+
+      if (authMode === 'register') {
+        const { data, error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: { data: { nombre } }
+        });
+
+        btn.disabled = false;
+        btn.textContent = "Registrarme y recibir código";
+
+        if (error) {
+          showAlert(error.message);
+          return;
+        }
+
+        pendingEmail = email;
+        document.getElementById('otp-target-email').textContent = email;
+        document.getElementById('auth-form').classList.add('hidden');
+        document.getElementById('auth-tabs').classList.add('hidden');
+        document.getElementById('otp-form').classList.remove('hidden');
+        showAlert("¡Código enviado! Revisa tu bandeja de entrada (o Spam).", "success");
+      } else {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        btn.disabled = false;
+        btn.textContent = "Ingresar a mi cuenta";
+
+        if (error) {
+          showAlert("Credenciales incorrectas o correo aún no verificado.");
+          return;
+        }
+        await loadStudentSession(data.user);
+      }
+    }
+
+    // Manejo automático de casillas OTP
+    const otpInputs = document.querySelectorAll('.otp-input');
+    otpInputs.forEach((input, idx) => {
+      input.addEventListener('input', (e) => {
+        if (e.target.value.length === 1 && idx < otpInputs.length - 1) otpInputs[idx + 1].focus();
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && idx > 0) otpInputs[idx - 1].focus();
+      });
+      input.addEventListener('paste', (e) => {
+        const paste = (e.clipboardData || window.clipboardData).getData('text').trim();
+        if (/^\d{6}$/.test(paste)) {
+          paste.split('').forEach((char, i) => { if (otpInputs[i]) otpInputs[i].value = char; });
+          otpInputs[5].focus();
+        }
+      });
+    });
+
+    async function verifyOtpCode() {
+      const token = Array.from(otpInputs).map(i => i.value).join('');
+      if (token.length !== 6) {
+        showAlert("Ingresa los 6 dígitos completos.");
+        return;
+      }
+      const btn = document.getElementById('verify-otp-btn');
+      btn.disabled = true;
+      btn.textContent = "Verificando...";
+
+      const { data, error } = await supabaseClient.auth.verifyOtp({
+        email: pendingEmail,
+        token: token,
+        type: 'signup'
+      });
+
+      btn.disabled = false;
+      btn.textContent = "Confirmar Código e Ingresar";
+
+      if (error) {
+        showAlert("Código inválido o expirado. Verifica e intenta de nuevo.");
+        return;
+      }
+
+      await loadStudentSession(data.user);
+    }
+
+    function backToRegister() {
+      document.getElementById('otp-form').classList.add('hidden');
+      document.getElementById('auth-form').classList.remove('hidden');
+      document.getElementById('auth-tabs').classList.remove('hidden');
+      hideAlert();
+    }
+
+    // =========================================================================
+    // 4. CARGA DE PROGRESO REAL DESDE SUPABASE
+    // =========================================================================
+    async function loadStudentSession(user) {
+      currentUser = user;
+      const { data, error } = await supabaseClient
+        .from('estudiantes')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (data) {
+        studentProfile = data;
+      } else {
+        studentProfile = { id: user.id, email: user.email, plan: 'gratis', lecciones_completadas: [] };
+      }
+
+      // Actualizar última actividad
+      await supabaseClient
+        .from('estudiantes')
+        .update({ ultima_actividad: new Date().toISOString() })
+        .eq('id', user.id);
+
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+      document.getElementById('user-display').textContent = studentProfile.nombre || studentProfile.email;
+
+      const badge = document.getElementById('plan-badge');
+      if (studentProfile.plan === 'vip') {
+        badge.textContent = 'MIEMBRO VIP';
+        badge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40';
+      }
+
+      // Ubicar en la primera lección pendiente
+      const completed = studentProfile.lecciones_completadas || [];
+      const nextLesson = LESSONS.find(l => !completed.includes(l.id)) || LESSONS[LESSONS.length - 1];
+      activeLessonId = nextLesson.id;
+
+      renderDashboard();
+    }
+
+    function isLessonUnlocked(lessonId) {
+      if (lessonId === 1) return true;
+      const completed = studentProfile.lecciones_completadas || [];
+      return completed.includes(lessonId - 1);
+    }
+
+    function renderDashboard() {
+      const completed = studentProfile.lecciones_completadas || [];
+      const pct = Math.round((completed.length / LESSONS.length) * 100);
+      document.getElementById('progress-text').textContent = `${pct}%`;
+      document.getElementById('progress-bar').style.width = `${pct}%`;
+
+      const sidebar = document.getElementById('lessons-sidebar');
+      sidebar.innerHTML = LESSONS.map(lesson => {
+        const isDone = completed.includes(lesson.id);
+        const unlocked = isLessonUnlocked(lesson.id);
+        const isActive = lesson.id === activeLessonId;
+
+        let icon = '<i class="fa-solid fa-lock text-slate-500"></i>';
+        if (isDone) icon = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+        else if (unlocked) icon = '<i class="fa-solid fa-play text-emerald-400"></i>';
+
+        return `
+          <button onclick="selectLesson(${lesson.id})" class="w-full text-left p-3 rounded-xl border transition flex items-start gap-3 ${isActive ? 'bg-navy-800 border-emerald-500/50' : 'bg-navy-950/60 border-navy-800 hover:border-navy-700'}">
+            <div class="mt-0.5">${icon}</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400">${lesson.vip ? 'VIP' : 'Gratis'}</span>
+                <span class="text-[10px] text-slate-500">${lesson.duration}</span>
+              </div>
+              <p class="text-xs font-semibold ${unlocked ? 'text-white' : 'text-slate-500'} truncate mt-0.5">${lesson.title}</p>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      renderActiveLesson();
+    }
+
+    function showToast(msg, type = 'warning') {
+      const toast = document.getElementById('lesson-toast');
+      toast.className = `mb-6 p-4 rounded-xl border text-sm flex items-center gap-3 ${
+        type === 'warning' ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
+      }`;
+      toast.innerHTML = `<i class="fa-solid ${type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i><span>${msg}</span>`;
+      toast.classList.remove('hidden');
+    }
+
+    function selectLesson(id) {
+      document.getElementById('lesson-toast').classList.add('hidden');
+      if (!isLessonUnlocked(id)) {
+        showToast(`¡No te saltes pasos! Debes completar y aprobar la Lección ${id - 1} antes de desbloquear esta clase.`, 'warning');
+        return;
+      }
+      activeLessonId = id;
+      renderDashboard();
+    }
+
+    function renderActiveLesson() {
+      const lesson = LESSONS.find(l => l.id === activeLessonId);
+      const completed = studentProfile.lecciones_completadas || [];
+      const isDone = completed.includes(lesson.id);
+      const container = document.getElementById('lesson-container');
+
+      // Bloqueo VIP si el plan es gratis
+      if (lesson.vip && studentProfile.plan !== 'vip') {
+        container.innerHTML = `
+          <div class="bg-navy-900 border border-amber-500/40 rounded-2xl p-8 text-center space-y-5">
+            <div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto text-2xl">
+              <i class="fa-solid fa-crown"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white">Contenido Exclusivo VIP</h2>
+            <p class="text-sm text-slate-300 max-w-md mx-auto">¡Felicitaciones por completar el módulo gratuito! Para desbloquear las estrategias institucionales y operativas en vivo, activa tu membresía VIP.</p>
+            <div class="pt-2">
+              <a href="https://wa.me/" target="_blank" class="inline-block bg-amber-500 hover:bg-amber-400 text-navy-950 font-bold px-6 py-3 rounded-xl transition">
+                Solicitar Acceso VIP
+              </a>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="space-y-6">
+          <div>
+            <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">${lesson.module}</span>
+            <h1 class="text-2xl font-bold text-white mt-1">${lesson.title}</h1>
+          </div>
+
+          <!-- Reproductor de video placeholder -->
+          <div class="aspect-video bg-navy-900 border border-navy-700 rounded-2xl flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+            <i class="fa-solid fa-circle-play text-5xl text-emerald-500 mb-3"></i>
+            <p class="text-sm font-medium text-white">Aquí irá tu video de YouTube (No listado) o Vimeo</p>
+            <p class="text-xs text-slate-400 mt-1 max-w-md">${lesson.summary}</p>
+          </div>
+
+          <!-- Validación para desbloquear la siguiente lección -->
+          <div class="bg-navy-900 border border-navy-700 rounded-2xl p-6 space-y-4">
+            <h3 class="font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-clipboard-check text-emerald-400"></i>
+              Validación de la Lección
+            </h3>
+            <p class="text-sm text-slate-300">${lesson.question}</p>
+            <div class="space-y-2">
+              ${lesson.options.map((opt, idx) => `
+                <label class="flex items-center gap-3 p-3 rounded-xl bg-navy-950 border border-navy-800 hover:border-emerald-500/50 cursor-pointer text-sm">
+                  <input type="radio" name="quiz-opt" value="${idx}" class="accent-emerald-500" ${isDone && idx === lesson.correct ? 'checked' : ''} />
+                  <span>${opt}</span>
+                </label>
+              `).join('')}
+            </div>
+            <button onclick="completeLesson(${lesson.id})" class="bg-emerald-500 hover:bg-emerald-400 text-navy-950 font-bold px-6 py-2.5 rounded-xl text-sm transition">
+              ${isDone ? 'Lección Aprobada ✓' : 'Validar y Desbloquear Siguiente Lección'}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function completeLesson(id) {
+      const lesson = LESSONS.find(l => l.id === id);
+      const selected = document.querySelector('input[name="quiz-opt"]:checked');
+      if (!selected) {
+        showToast("Selecciona una respuesta antes de validar la lección.", "warning");
+        return;
+      }
+      if (parseInt(selected.value) !== lesson.correct) {
+        showToast("Respuesta incorrecta. Repasa el concepto e inténtalo de nuevo.", "warning");
+        return;
+      }
+
+      const completed = new Set(studentProfile.lecciones_completadas || []);
+      completed.add(id);
+      const updatedArray = Array.from(completed);
+
+      // Guardar progreso en Supabase en tiempo real
+      const { error } = await supabaseClient
+        .from('estudiantes')
+        .update({
+          lecciones_completadas: updatedArray,
+          ultima_actividad: new Date().toISOString()
+        })
+        .eq('id', currentUser.id);
+
+      if (error) {
+        showToast("Error guardando progreso: " + error.message, "warning");
+        return;
+      }
+
+      studentProfile.lecciones_completadas = updatedArray;
+      const remaining = LESSONS.length - updatedArray.length;
+      let msg = `¡Felicitaciones! Aprobaste la Lección ${id}.`;
+      if (remaining === 2) msg += " ¡Ya solo te faltan 2 lecciones para completar todo el programa!";
+      else if (remaining > 0) msg += ` Ya tienes desbloqueada la Lección ${id + 1}.`;
+
+      showToast(msg, "success");
+      if (id < LESSONS.length) activeLessonId = id + 1;
+      renderDashboard();
+    }
+
+    async function logout() {
+      await supabaseClient.auth.signOut();
+      location.reload();
+    }
+
+    // Verificar si ya hay sesión abierta al recargar la página
+    (async () => {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data?.session?.user) {
+        await loadStudentSession(data.session.user);
+      }
+    })();
+  </script>
+</body>
+</html>
