@@ -20,7 +20,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
     body { background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    /* AUTH SCREEN */
+    /* PANTALLA DE ACCESO */
     .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
     .auth-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 420px; padding: 32px; }
     .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
@@ -37,15 +37,13 @@
     .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--green); color: #04130d; font-weight: 700; font-size: 15px; cursor: pointer; transition: .2s; }
     .btn:hover { background: var(--green-hover); }
     .btn:disabled { opacity: .6; cursor: not-allowed; }
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .btn-outline:hover { border-color: var(--green); color: var(--green); background: transparent; }
     .alert { padding: 12px; border-radius: 10px; font-size: 13px; margin-bottom: 16px; display: none; }
     .alert.error { display: block; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.4); color: #fca5a5; }
     .alert.success { display: block; background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.4); color: #6ee7b7; }
     .otp-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 18px 0; }
     .otp-row input { text-align: center; font-size: 20px; font-weight: 700; padding: 12px 0; border-radius: 10px; border: 1px solid var(--border); background: #0a101d; color: var(--text); }
 
-    /* APP LAYOUT */
+    /* PLATAFORMA PRINCIPAL */
     .topbar { height: 64px; background: var(--card); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
     .badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: rgba(16,185,129,.15); color: var(--green); border: 1px solid rgba(16,185,129,.3); margin-left: 10px; }
     .user-actions { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
@@ -85,7 +83,7 @@
     .file-drop input[type="file"] { width: 100%; color: var(--muted); font-size: 13px; }
     .preview-img { max-height: 180px; border-radius: 8px; margin-top: 12px; border: 1px solid var(--border); display: none; }
 
-    /* ADMIN TABLE */
+    /* TABLA ADMIN */
     table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
     th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); }
     th { color: var(--muted); font-weight: 600; }
@@ -208,7 +206,6 @@
           <h2 class="lesson-title">01. Activa tu cuenta en nuestra academia Entrena Traders</h2>
 
           <!-- RECUADRO DE VIDEO LISTO -->
-          <!-- NOTA PARA TI: Cuando subas tu video a YouTube (No listado), reemplaza la línea de abajo donde dice VIDEO_YOUTUBE_ID por el código de tu video (ej. dQw4w9WgXcQ) -->
           <div class="video-box" id="welcomeVideoBox">
             <div class="play-circle">▶</div>
             <h3 style="margin-bottom:6px;">Video de Bienvenida (Espacio Listo)</h3>
@@ -274,8 +271,273 @@
 
   <script>
     const SUPABASE_URL = "https://escuela-sinteticos-global.netlify.app/api";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpubWtoYXl2eW1zdm15bXBkdHNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2OTEzNjUsImV4cCI6MjA5MTI2NzM2NX0.m6M-q_T6T-6V2J1J1J1J1J1J1J1J1J1J1J1J1J1J1J0";
-    // Nota: conservamos automáticamente tu llave anon real si ya la tenías, o pega aquí tu anon key si difiere.
+    const SUPABASE_KEY = "sb_publishable_t1glQESqds1iQKs82--gWw_-89OrGMo";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const ADMIN_EMAIL = "pachapachonpardo@gmail.com";
+    const YOUTUBE_WELCOME_ID = "";
+
+    let authMode = "register";
+    let pendingEmail = "";
+    let currentUser = null;
+    let currentStepUnlocked = 1;
+    let adminMode = false;
+
+    if (YOUTUBE_WELCOME_ID) {
+      document.getElementById("welcomeVideoBox").innerHTML =
+        `<iframe src="https://www.youtube.com/embed/${YOUTUBE_WELCOME_ID}" allowfullscreen></iframe>`;
+    }
+
+    function showAlert(elId, msg, type) {
+      const el = document.getElementById(elId);
+      el.textContent = msg;
+      el.className = `alert ${type}`;
+    }
+
+    function switchAuthTab(mode) {
+      authMode = mode;
+      document.getElementById("tabRegister").classList.toggle("active", mode === "register");
+      document.getElementById("tabLogin").classList.toggle("active", mode === "login");
+      document.getElementById("nameField").style.display = mode === "register" ? "block" : "none";
+      document.getElementById("authSubmitBtn").textContent =
+        mode === "register" ? "Registrarme y recibir código" : "Ingresar a la plataforma";
+    }
+
+    document.querySelectorAll("#otpInputs input").forEach((inp, idx, arr) => {
+      inp.addEventListener("input", () => {
+        if (inp.value && idx < arr.length - 1) arr[idx + 1].focus();
+      });
+    });
+
+    async function handleAuth() {
+      const email = document.getElementById("emailInput").value.trim();
+      const password = document.getElementById("passwordInput").value;
+      const fullName = document.getElementById("fullName").value.trim();
+
+      if (!email || password.length < 6) {
+        return showAlert("authAlert", "Ingresa un correo válido y una contraseña de al menos 6 caracteres.", "error");
+      }
+
+      const btn = document.getElementById("authSubmitBtn");
+      btn.disabled = true;
+
+      if (authMode === "register") {
+        const { error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName } }
+        });
+        btn.disabled = false;
+        if (error) return showAlert("authAlert", error.message, "error");
+
+        pendingEmail = email;
+        document.getElementById("otpEmailLabel").textContent = email;
+        document.getElementById("formStep").style.display = "none";
+        document.getElementById("otpStep").style.display = "block";
+        showAlert("authAlert", "¡Código enviado! Revisa tu bandeja de entrada.", "success");
+      } else {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        btn.disabled = false;
+        if (error) return showAlert("authAlert", error.message, "error");
+        if (data.user) initApp(data.user);
+      }
+    }
+
+    async function verifyOtp() {
+      const code = Array.from(document.querySelectorAll("#otpInputs input")).map(i => i.value).join("");
+      if (code.length !== 6) return showAlert("authAlert", "Escribe los 6 dígitos del correo.", "error");
+
+      const { data, error } = await supabaseClient.auth.verifyOtp({
+        email: pendingEmail,
+        token: code,
+        type: "signup"
+      });
+      if (error) return showAlert("authAlert", error.message, "error");
+      if (data.user) initApp(data.user);
+    }
+
+    function resetAuth() {
+      document.getElementById("otpStep").style.display = "none";
+      document.getElementById("formStep").style.display = "block";
+      document.getElementById("authAlert").className = "alert";
+    }
+
+    async function initApp(user) {
+      currentUser = user;
+      document.getElementById("authScreen").style.display = "none";
+      document.getElementById("appScreen").style.display = "block";
+      document.getElementById("userEmailDisplay").textContent = user.email;
+      document.getElementById("reminderEmail").textContent = user.email;
+
+      if (user.email === ADMIN_EMAIL) {
+        document.getElementById("adminToggleBtn").style.display = "inline-block";
+      }
+
+      const { data: prog } = await supabaseClient
+        .from("progreso_bienvenida")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!prog) {
+        await supabaseClient.from("progreso_bienvenida").insert({
+          user_id: user.id,
+          email: user.email,
+          nombre: user.user_metadata?.full_name || "Estudiante",
+          paso_actual: 1
+        });
+        currentStepUnlocked = 1;
+      } else {
+        currentStepUnlocked = prog.paso_actual || 1;
+      }
+
+      updateProgressUI();
+    }
+
+    function updateProgressUI() {
+      const unlocked2 = currentStepUnlocked >= 2;
+      document.getElementById("progressPct").textContent = unlocked2 ? "50%" : "0%";
+      document.getElementById("progressFill").style.width = unlocked2 ? "50%" : "5%";
+
+      const nav2 = document.getElementById("navStep2");
+      const icon2 = document.getElementById("iconStep2");
+      if (unlocked2) {
+        nav2.classList.remove("locked");
+        icon2.textContent = "▶";
+        document.getElementById("iconStep1").textContent = "✅";
+        document.getElementById("verificationCard").style.display = "none";
+        document.getElementById("step1CompletedCard").style.display = "block";
+      }
+    }
+
+    function selectStep(step) {
+      adminMode = false;
+      document.getElementById("adminView").style.display = "none";
+      if (step === 2 && currentStepUnlocked < 2) {
+        alert("Primero debes subir tu captura de pantalla y responder la pregunta candado en el Paso 1.");
+        return;
+      }
+      document.getElementById("step1View").style.display = step === 1 ? "block" : "none";
+      document.getElementById("step2View").style.display = step === 2 ? "block" : "none";
+      document.getElementById("navStep1").classList.toggle("active", step === 1);
+      document.getElementById("navStep2").classList.toggle("active", step === 2);
+    }
+
+    function previewScreenshot(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const img = document.getElementById("screenshotPreview");
+      img.src = URL.createObjectURL(file);
+      img.style.display = "block";
+    }
+
+    function normalizeText(str) {
+      return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    async function validateStep1() {
+      const fileInput = document.getElementById("screenshotInput");
+      const rawAnswer = document.getElementById("lockAnswerInput").value;
+      const cleanAnswer = normalizeText(rawAnswer);
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        return showAlert("step1Alert", "Por favor adjunta primero la captura de pantalla de tu cuenta en Entrena Traders.", "error");
+      }
+
+      const validPhrases = ["joan vina entra", "joan vina", "entra joan vina"];
+      const isCorrect = validPhrases.some(p => cleanAnswer.includes(p));
+
+      if (!isCorrect) {
+        return showAlert(
+          "step1Alert",
+          "La respuesta de la pregunta candado no coincide. Entra al video #2 'Herramientas de análisis' en Entrena Traders, dale reproducir y escribe el nombre y texto exacto que aparece en pantalla.",
+          "error"
+        );
+      }
+
+      const btn = document.getElementById("submitStep1Btn");
+      btn.disabled = true;
+      btn.textContent = "Subiendo evidencia y verificando...";
+
+      try {
+        const file = fileInput.files[0];
+        const ext = file.name.split(".").pop() || "png";
+        const filePath = `${currentUser.id}/paso1_${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabaseClient.storage
+          .from("evidencias")
+          .upload(filePath, file, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data: pubData } = supabaseClient.storage.from("evidencias").getPublicUrl(filePath);
+
+        const { error: dbError } = await supabaseClient
+          .from("progreso_bienvenida")
+          .update({
+            paso_actual: 2,
+            evidencia_paso1_url: pubData.publicUrl,
+            respuesta_paso1: rawAnswer.trim(),
+            actualizado_en: new Date().toISOString()
+          })
+          .eq("user_id", currentUser.id);
+
+        if (dbError) throw dbError;
+
+        currentStepUnlocked = 2;
+        updateProgressUI();
+        showAlert("step1Alert", "¡Verificación exitosa! Se desbloqueó el Paso 2.", "success");
+      } catch (err) {
+        showAlert("step1Alert", "Error al guardar evidencia: " + err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Validar Evidencia y Desbloquear Paso 2";
+      }
+    }
+
+    async function toggleAdminView() {
+      adminMode = !adminMode;
+      document.getElementById("adminView").style.display = adminMode ? "block" : "none";
+      document.getElementById("step1View").style.display = adminMode ? "none" : "block";
+      document.getElementById("step2View").style.display = "none";
+
+      if (adminMode) {
+        const { data } = await supabaseClient
+          .from("progreso_bienvenida")
+          .select("*")
+          .order("actualizado_en", { ascending: false });
+
+        const tbody = document.getElementById("adminTableBody");
+        if (!data || data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5">Aún no hay registros.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.map(row => `
+          <tr>
+            <td>${row.nombre || "Alumno"}</td>
+            <td>${row.email}</td>
+            <td><strong>Paso ${row.paso_actual}</strong></td>
+            <td>${row.respuesta_paso1 || "—"}</td>
+            <td>${row.evidencia_paso1_url ? `<a href="${row.evidencia_paso1_url}" target="_blank" class="ev-link">Ver Captura ↗</a>` : "Pendiente"}</td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    async function logout() {
+      await supabaseClient.auth.signOut();
+      location.reload();
+    }
+
+    (async () => {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data?.session?.user) initApp(data.session.user);
+    })();
   </script>
 </body>
 </html>
