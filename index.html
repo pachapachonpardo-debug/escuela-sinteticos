@@ -271,8 +271,9 @@
 
   <script>
     const SUPABASE_URL = "https://escuela-sinteticos-global.netlify.app/api";
-    const SUPABASE_KEY = "sb_publishable_t1glQESqds1iQKs82--gWw_-89OrGMo";
+    const SUPABASE_KEY = "PEGA_AQUI_TU_PUBLISHABLE_KEY";
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabaseStorage = window.supabase.createClient("https://znmkhayvymsvmympdtsm.supabase.co", SUPABASE_KEY);
 
     const ADMIN_EMAIL = "pachapachonpardo@gmail.com";
     const YOUTUBE_WELCOME_ID = "";
@@ -469,13 +470,13 @@
         const ext = file.name.split(".").pop() || "png";
         const filePath = `${currentUser.id}/paso1_${Date.now()}.${ext}`;
 
-        const { error: uploadError } = await supabaseClient.storage
+        const { error: uploadError } = await supabaseStorage.storage
           .from("evidencias")
           .upload(filePath, file, { upsert: true });
 
         if (uploadError) throw uploadError;
 
-        const { data: pubData } = supabaseClient.storage.from("evidencias").getPublicUrl(filePath);
+        const { data: pubData } = supabaseStorage.storage.from("evidencias").getPublicUrl(filePath);
 
         const { error: dbError } = await supabaseClient
           .from("progreso_bienvenida")
