@@ -13,7 +13,7 @@ exports.handler = async (event) => {
 
   const path = event.path.replace(/^\/\.netlify\/functions\/proxy/, '');
   const query = event.rawQuery ? `?${event.rawQuery}` : '';
-  const targetUrl = `https://znmkhayvymsvymympdtsm.supabase.co${path}${query}`;
+  const targetUrl = `https://znmkhayvymsvmympdtsm.supabase.co${path}${query}`;
 
   const cleanHeaders = {};
   const allowed = ['apikey', 'authorization', 'content-type', 'x-client-info', 'prefer', 'range'];
