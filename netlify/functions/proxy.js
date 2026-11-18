@@ -15,14 +15,16 @@ exports.handler = async (event) => {
   const query = event.rawQuery ? `?${event.rawQuery}` : '';
   const targetUrl = `https://znmkhayvymsvymympdtsm.supabase.co${path}${query}`;
 
-  const headers = { ...event.headers };
-  delete headers.host;
-  delete headers['content-length'];
+  const cleanHeaders = {};
+  const allowed = ['apikey', 'authorization', 'content-type', 'x-client-info', 'prefer', 'range'];
+  for (const key of allowed) {
+    if (event.headers[key]) cleanHeaders[key] = event.headers[key];
+  }
 
   try {
     const response = await fetch(targetUrl, {
       method: event.httpMethod,
-      headers,
+      headers: cleanHeaders,
       body: ['GET', 'HEAD'].includes(event.httpMethod) ? undefined : event.body,
     });
 
@@ -39,7 +41,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: err.message }),
+      body: JSON.stringify({ error: err.message, cause: err.cause ? String(err.cause) : null }),
     };
   }
 };
