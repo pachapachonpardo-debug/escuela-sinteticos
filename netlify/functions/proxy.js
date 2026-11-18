@@ -17,15 +17,24 @@ exports.handler = async (event) => {
 
   const cleanHeaders = {};
   const allowed = ['apikey', 'authorization', 'content-type', 'x-client-info', 'prefer', 'range'];
-  for (const key of allowed) {
-    if (event.headers[key]) cleanHeaders[key] = event.headers[key];
+  for (const [k, v] of Object.entries(event.headers || {})) {
+    if (allowed.includes(k.toLowerCase())) {
+      cleanHeaders[k.toLowerCase()] = v;
+    }
+  }
+
+  let bodyData = undefined;
+  if (!['GET', 'HEAD'].includes(event.httpMethod) && event.body) {
+    bodyData = event.isBase64Encoded
+      ? Buffer.from(event.body, 'base64').toString('utf-8')
+      : event.body;
   }
 
   try {
     const response = await fetch(targetUrl, {
       method: event.httpMethod,
       headers: cleanHeaders,
-      body: ['GET', 'HEAD'].includes(event.httpMethod) ? undefined : event.body,
+      body: bodyData,
     });
 
     const text = await response.text();
@@ -35,13 +44,13 @@ exports.handler = async (event) => {
         'Content-Type': response.headers.get('content-type') || 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: text,
+      body: text || '{}',
     };
   } catch (err) {
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: err.message, cause: err.cause ? String(err.cause) : null }),
+      body: JSON.stringify({ error: err.message }),
     };
   }
 };
